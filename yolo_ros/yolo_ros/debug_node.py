@@ -283,9 +283,9 @@ class DebugNode(LifecycleNode):
         marker.scale.y = bbox3d.size.y
         marker.scale.z = bbox3d.size.z
 
-        marker.color.b = color[0] / 255.0
+        marker.color.r = color[0] / 255.0
         marker.color.g = color[1] / 255.0
-        marker.color.r = color[2] / 255.0
+        marker.color.b = color[2] / 255.0
         marker.color.a = 0.4
 
         marker.lifetime = Duration(seconds=0.5).to_msg()
@@ -314,9 +314,9 @@ class DebugNode(LifecycleNode):
         marker.scale.y = 0.05
         marker.scale.z = 0.05
 
-        marker.color.b = keypoint.score * 255.0
-        marker.color.g = 0.0
         marker.color.r = (1.0 - keypoint.score) * 255.0
+        marker.color.g = 0.0
+        marker.color.b = keypoint.score * 255.0
         marker.color.a = 0.4
 
         marker.lifetime = Duration(seconds=0.5).to_msg()
