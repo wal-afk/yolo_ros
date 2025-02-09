@@ -28,7 +28,7 @@ from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.lifecycle import LifecycleState
 
 import torch
-from ultralytics import YOLO, NAS, YOLOWorld
+from ultralytics import YOLO, YOLOWorld
 from ultralytics.engine.results import Results
 from ultralytics.engine.results import Boxes
 from ultralytics.engine.results import Masks
@@ -69,7 +69,7 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("enable", True)
         self.declare_parameter("image_reliability", QoSReliabilityPolicy.BEST_EFFORT)
 
-        self.type_to_model = {"YOLO": YOLO, "NAS": NAS, "World": YOLOWorld}
+        self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld}
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         self.get_logger().info(f"[{self.get_name()}] Configuring...")
