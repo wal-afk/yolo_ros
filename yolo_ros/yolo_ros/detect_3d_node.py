@@ -221,7 +221,10 @@ class Detect3DNode(LifecycleNode):
         return new_detections
 
     def convert_bb_to_3d(
-        self, depth_image: np.ndarray, depth_info: CameraInfo, detection: Detection
+        self,
+        depth_image: np.ndarray,
+        depth_info: CameraInfo,
+        detection: Detection,
     ) -> BoundingBox3D:
 
         center_x = int(detection.bbox.center.position.x)
@@ -293,7 +296,10 @@ class Detect3DNode(LifecycleNode):
         return msg
 
     def convert_keypoints_to_3d(
-        self, depth_image: np.ndarray, depth_info: CameraInfo, detection: Detection
+        self,
+        depth_image: np.ndarray,
+        depth_info: CameraInfo,
+        detection: Detection,
     ) -> KeyPoint3DArray:
 
         # build an array of 2d keypoints
@@ -362,7 +368,9 @@ class Detect3DNode(LifecycleNode):
 
     @staticmethod
     def transform_3d_box(
-        bbox: BoundingBox3D, translation: np.ndarray, rotation: np.ndarray
+        bbox: BoundingBox3D,
+        translation: np.ndarray,
+        rotation: np.ndarray,
     ) -> BoundingBox3D:
 
         # position
@@ -397,7 +405,9 @@ class Detect3DNode(LifecycleNode):
 
     @staticmethod
     def transform_3d_keypoints(
-        keypoints: KeyPoint3DArray, translation: np.ndarray, rotation: np.ndarray
+        keypoints: KeyPoint3DArray,
+        translation: np.ndarray,
+        rotation: np.ndarray,
     ) -> KeyPoint3DArray:
 
         for point in keypoints.data:

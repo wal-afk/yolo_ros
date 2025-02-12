@@ -324,12 +324,16 @@ def generate_launch_description():
 
     use_tracking = LaunchConfiguration("use_tracking")
     use_tracking_cmd = DeclareLaunchArgument(
-        "use_tracking", default_value="True", description="Whether to activate tracking"
+        "use_tracking",
+        default_value="True",
+        description="Whether to activate tracking",
     )
 
     use_3d = LaunchConfiguration("use_3d")
     use_3d_cmd = DeclareLaunchArgument(
-        "use_3d", default_value="True", description="Whether to activate 3D detections"
+        "use_3d",
+        default_value="True",
+        description="Whether to activate 3D detections",
     )
 
     return LaunchDescription(

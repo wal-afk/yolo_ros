@@ -129,7 +129,10 @@ class DebugNode(LifecycleNode):
         return TransitionCallbackReturn.SUCCESS
 
     def draw_box(
-        self, cv_image: np.ndarray, detection: Detection, color: Tuple[int]
+        self,
+        cv_image: np.ndarray,
+        detection: Detection,
+        color: Tuple[int],
     ) -> np.ndarray:
 
         # get detection info
@@ -184,7 +187,10 @@ class DebugNode(LifecycleNode):
         return cv_image
 
     def draw_mask(
-        self, cv_image: np.ndarray, detection: Detection, color: Tuple[int]
+        self,
+        cv_image: np.ndarray,
+        detection: Detection,
+        color: Tuple[int],
     ) -> np.ndarray:
 
         mask_msg = detection.mask

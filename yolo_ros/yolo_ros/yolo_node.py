@@ -197,7 +197,9 @@ class YoloNode(LifecycleNode):
         return TransitionCallbackReturn.SUCCESS
 
     def enable_cb(
-        self, request: SetBool.Request, response: SetBool.Response
+        self,
+        request: SetBool.Request,
+        response: SetBool.Response,
     ) -> SetBool.Response:
         self.enable = request.data
         response.success = True
@@ -382,7 +384,9 @@ class YoloNode(LifecycleNode):
             del cv_image
 
     def set_classes_cb(
-        self, req: SetClasses.Request, res: SetClasses.Response
+        self,
+        req: SetClasses.Request,
+        res: SetClasses.Response,
     ) -> SetClasses.Response:
         self.get_logger().info(f"Setting classes: {req.classes}")
         self.yolo.set_classes(req.classes)
