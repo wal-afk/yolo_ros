@@ -196,7 +196,9 @@ class Detect3DNode(LifecycleNode):
             return []
 
         new_detections = []
-        depth_image = self.cv_bridge.imgmsg_to_cv2(depth_msg, desired_encoding="passthrough")
+        depth_image = self.cv_bridge.imgmsg_to_cv2(
+            depth_msg, desired_encoding="passthrough"
+        )
 
         for detection in detections_msg.detections:
             bbox3d = self.convert_bb_to_3d(depth_image, depth_info_msg, detection)
