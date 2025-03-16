@@ -44,7 +44,7 @@ def generate_launch_description():
                         "input_image_topic", default="/camera/rgb/image_raw"
                     ),
                     "image_reliability": LaunchConfiguration(
-                        "image_reliability", default="2"
+                        "image_reliability", default="1"
                     ),
                     "namespace": LaunchConfiguration("namespace", default="yolo"),
                 }.items(),
