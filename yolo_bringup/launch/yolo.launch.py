@@ -57,6 +57,13 @@ def generate_launch_description():
             description="Device to use (GPU/CPU)",
         )
 
+        yolo_encoding = LaunchConfiguration("yolo_encoding")
+        yolo_encoding_cmd = DeclareLaunchArgument(
+            "yolo_encoding",
+            default_value="bgr8",
+            description="Encoding of the input image topic",
+        )
+
         enable = LaunchConfiguration("enable")
         enable_cmd = DeclareLaunchArgument(
             "enable",
@@ -229,6 +236,7 @@ def generate_launch_description():
                     "model_type": model_type,
                     "model": model,
                     "device": device,
+                    "yolo_encoding": yolo_encoding,
                     "enable": enable,
                     "threshold": threshold,
                     "iou": iou,
@@ -295,6 +303,7 @@ def generate_launch_description():
             model_cmd,
             tracker_cmd,
             device_cmd,
+            yolo_encoding_cmd,
             enable_cmd,
             threshold_cmd,
             iou_cmd,

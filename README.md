@@ -125,6 +125,7 @@ These are the parameters from the [yolo.launch.py](./yolo_bringup/launch/yolo.la
 - **model**: YOLO model (default: yolov8m.pt)
 - **tracker**: tracker file (default: bytetrack.yaml)
 - **device**: GPU/CUDA (default: cuda:0)
+- **yolo_encoding**: Encoding to convert input image before using YOLO (default: bgr8)
 - **enable**: whether to start YOLO enabled (default: True)
 - **threshold**: detection threshold (default: 0.5)
 - **iou**: intersection Over Union (IoU) threshold for Non-Maximum Suppression (NMS) (default: 0.7)

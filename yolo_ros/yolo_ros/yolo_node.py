@@ -55,6 +55,9 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("model_type", "YOLO")
         self.declare_parameter("model", "yolov8m.pt")
         self.declare_parameter("device", "cuda:0")
+        self.declare_parameter("yolo_encoding", "bgr8")
+        self.declare_parameter("enable", True)
+        self.declare_parameter("image_reliability", QoSReliabilityPolicy.BEST_EFFORT)
 
         self.declare_parameter("threshold", 0.5)
         self.declare_parameter("iou", 0.5)
@@ -65,9 +68,6 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("augment", False)
         self.declare_parameter("agnostic_nms", False)
         self.declare_parameter("retina_masks", False)
-
-        self.declare_parameter("enable", True)
-        self.declare_parameter("image_reliability", QoSReliabilityPolicy.BEST_EFFORT)
 
         self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld}
 
@@ -80,6 +80,9 @@ class YoloNode(LifecycleNode):
         )
         self.model = self.get_parameter("model").get_parameter_value().string_value
         self.device = self.get_parameter("device").get_parameter_value().string_value
+        self.yolo_encoding = (
+            self.get_parameter("yolo_encoding").get_parameter_value().string_value
+        )
 
         # inference params
         self.threshold = (
@@ -326,8 +329,9 @@ class YoloNode(LifecycleNode):
         if self.enable:
 
             # convert image + predict
-            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            cv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            cv_image = self.cv_bridge.imgmsg_to_cv2(
+                msg, desired_encoding=self.yolo_encoding
+            )
             results = self.yolo.predict(
                 source=cv_image,
                 verbose=False,
