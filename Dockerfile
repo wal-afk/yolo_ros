@@ -7,21 +7,22 @@ SHELL ["/bin/bash", "-c"]
 COPY . /root/ros2_ws/src
 
 # Install dependencies
-RUN apt-get update \
-    && apt-get -y --quiet --no-install-recommends install \
-    gcc \
-    git \
-    python3 \
-    python3-pip
-RUN pip3 install -r src/requirements.txt
+RUN apt-get update
+RUN apt-get -y --quiet --no-install-recommends install python3-pip
 RUN rosdep install --from-paths src --ignore-src -r -y
 
-# Colcon the ws
+RUN if [ "$ROS_DISTRO" = "jazzy" ] || [ "$ROS_DISTRO" = "rolling" ]; then \
+    pip3 install -r src/requirements.txt --break-system-packages --ignore-installed; \
+    else \
+    pip3 install -r src/requirements.txt; \
+    fi
+
+# Build the ws with colcon
 FROM deps AS builder
 ARG CMAKE_BUILD_TYPE=Release
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && colcon build
 
-# Source the ROS2 setup file
+# Source the ROS 2 setup file
 RUN echo "source /root/ros2_ws/install/setup.bash" >> ~/.bashrc
 
 # Run a default command, e.g., starting a bash shell
