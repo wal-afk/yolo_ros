@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=rolling
+ARG ROS_DISTRO=humble
 FROM ros:${ROS_DISTRO} AS deps
 
 # Create ros2_ws and copy files
@@ -8,7 +8,7 @@ COPY . /root/ros2_ws/src
 
 # Install dependencies
 RUN apt-get update
-RUN apt-get -y --quiet --no-install-recommends install python3-pip
+RUN apt-get -y --quiet --no-install-recommends install python3 python3-pip
 RUN rosdep install --from-paths src --ignore-src -r -y
 
 RUN if [ "$(lsb_release -rs)" = "24.04" ] || [ "$(lsb_release -rs)" = "24.10" ]; then \
