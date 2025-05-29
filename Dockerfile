@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=rolling
 FROM ros:${ROS_DISTRO} AS deps
 
 # Create ros2_ws and copy files
@@ -11,7 +11,7 @@ RUN apt-get update
 RUN apt-get -y --quiet --no-install-recommends install python3-pip
 RUN rosdep install --from-paths src --ignore-src -r -y
 
-RUN if [ "$ROS_DISTRO" = "jazzy" ] || [ "$ROS_DISTRO" = "rolling" ]; then \
+RUN if [ "$(lsb_release -rs)" = "24.04" ] || [ "$(lsb_release -rs)" = "24.10" ]; then \
     pip3 install -r src/requirements.txt --break-system-packages --ignore-installed; \
     else \
     pip3 install -r src/requirements.txt; \
