@@ -69,6 +69,8 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("agnostic_nms", False)
         self.declare_parameter("retina_masks", False)
 
+        self.declare_parameter("publish_result_img", True)
+
         self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld, "YOLOE": YOLOE}
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
@@ -119,7 +121,20 @@ class YoloNode(LifecycleNode):
             depth=1,
         )
 
-        self._pub = self.create_lifecycle_publisher(DetectionArray, "detections", 10)
+        self.publish_result_img = (
+            self.get_parameter("publish_result_img").get_parameter_value().bool_value
+        )
+
+        self._detection_pub = self.create_lifecycle_publisher(
+            DetectionArray, "detections", 10
+        )
+        self._image_pub = (
+            self.create_lifecycle_publisher(
+                Image, "detections_img", self.image_qos_profile
+            )
+            if self.publish_result_img
+            else None
+        )
         self.cv_bridge = CvBridge()
 
         super().on_configure(state)
@@ -136,7 +151,6 @@ class YoloNode(LifecycleNode):
             self.get_logger().error(f"Model file '{self.model}' does not exists")
             return TransitionCallbackReturn.ERROR
 
-        # YOLOE does not support fusing
         if isinstance(self.yolo, YOLO) or isinstance(self.yolo, YOLOWorld):
             try:
                 self.get_logger().info("Trying to fuse model...")
@@ -186,7 +200,9 @@ class YoloNode(LifecycleNode):
     def on_cleanup(self, state: LifecycleState) -> TransitionCallbackReturn:
         self.get_logger().info(f"[{self.get_name()}] Cleaning up...")
 
-        self.destroy_publisher(self._pub)
+        self.destroy_publisher(self._detection_pub)
+        if self._image_pub is not None:
+            self.destroy_publisher(self._image_pub)
 
         del self.image_qos_profile
 
@@ -326,16 +342,16 @@ class YoloNode(LifecycleNode):
 
         return keypoints_list
 
-    def image_cb(self, msg: Image) -> None:
+    def image_cb(self, input_img_msg: Image) -> None:
 
         if self.enable:
 
             # convert image + predict
-            cv_image = self.cv_bridge.imgmsg_to_cv2(
-                msg, desired_encoding=self.yolo_encoding
+            input_image = self.cv_bridge.imgmsg_to_cv2(
+                input_img_msg, desired_encoding=self.yolo_encoding
             )
             results = self.yolo.predict(
-                source=cv_image,
+                source=input_image,
                 verbose=False,
                 stream=False,
                 conf=self.threshold,
@@ -348,46 +364,60 @@ class YoloNode(LifecycleNode):
                 retina_masks=self.retina_masks,
                 device=self.device,
             )
-            results: Results = results[0].cpu()
+            result: Results = results[0].cpu()
 
-            if results.boxes or results.obb:
-                hypothesis = self.parse_hypothesis(results)
-                boxes = self.parse_boxes(results)
+            if result.boxes or result.obb:
+                hypothesis = self.parse_hypothesis(result)
+                boxes = self.parse_boxes(result)
 
-            if results.masks:
-                masks = self.parse_masks(results)
+            if result.masks:
+                masks = self.parse_masks(result)
 
-            if results.keypoints:
-                keypoints = self.parse_keypoints(results)
+            if result.keypoints:
+                keypoints = self.parse_keypoints(result)
 
             # create detection msgs
             detections_msg = DetectionArray()
 
-            for i in range(len(results)):
+            detect_dict={}
+            for i in range(len(result)):
 
                 aux_msg = Detection()
 
-                if results.boxes or results.obb and hypothesis and boxes:
+                if result.boxes or result.obb and hypothesis and boxes:
                     aux_msg.class_id = hypothesis[i]["class_id"]
                     aux_msg.class_name = hypothesis[i]["class_name"]
                     aux_msg.score = hypothesis[i]["score"]
 
+                    if aux_msg.class_name not in detect_dict:
+                        detect_dict[aux_msg.class_name]=1
+                    else:
+                        detect_dict[aux_msg.class_name]+=1
+
                     aux_msg.bbox = boxes[i]
 
-                if results.masks and masks:
+                if result.masks and masks:
                     aux_msg.mask = masks[i]
 
-                if results.keypoints and keypoints:
+                if result.keypoints and keypoints:
                     aux_msg.keypoints = keypoints[i]
 
                 detections_msg.detections.append(aux_msg)
 
             # publish detections
-            detections_msg.header = msg.header
-            self._pub.publish(detections_msg)
+            detections_msg.header = input_img_msg.header
+            self._detection_pub.publish(detections_msg)
+            if self.publish_result_img:
+                output_img = result.plot()
 
-            del results
-            del cv_image
+                output_img_msg = self.cv_bridge.cv2_to_imgmsg(
+                    output_img, encoding="bgr8", header=input_img_msg.header
+                )
+
+                self._image_pub.publish(output_img_msg)
+            self.get_logger().info(f"detect: {detect_dict}")
+            del result
+            del input_image
 
     def set_classes_cb(
         self,
