@@ -70,7 +70,7 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("agnostic_nms", False)
         self.declare_parameter("retina_masks", False)
 
-        self.declare_parameter("publish_result_img", True)
+        self.declare_parameter("publish_result_img", False)
 
         # self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld, "YOLOE": YOLOE}
         self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld}
