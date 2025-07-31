@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import time
 
 import cv2
 from typing import List, Dict
@@ -28,6 +29,7 @@ from rclpy.lifecycle import TransitionCallbackReturn
 from rclpy.lifecycle import LifecycleState
 
 import torch
+
 # from ultralytics import YOLO, YOLOWorld, YOLOE
 from ultralytics import YOLO, YOLOWorld
 from ultralytics.engine.results import Results
@@ -58,7 +60,7 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("device", "cuda:0")
         self.declare_parameter("yolo_encoding", "bgr8")
         self.declare_parameter("enable", True)
-        self.declare_parameter("image_reliability", QoSReliabilityPolicy.BEST_EFFORT)
+        self.declare_parameter("image_reliability", QoSReliabilityPolicy.RELIABLE)
 
         self.declare_parameter("threshold", 0.5)
         self.declare_parameter("iou", 0.5)
@@ -71,9 +73,12 @@ class YoloNode(LifecycleNode):
         self.declare_parameter("retina_masks", False)
 
         self.declare_parameter("publish_result_img", False)
+        self.declare_parameter("auto_activate", True)
 
         # self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld, "YOLOE": YOLOE}
         self.type_to_model = {"YOLO": YOLO, "World": YOLOWorld}
+
+        self.trigger_configure()
 
     def on_configure(self, state: LifecycleState) -> TransitionCallbackReturn:
         self.get_logger().info(f"[{self.get_name()}] Configuring...")
@@ -126,14 +131,15 @@ class YoloNode(LifecycleNode):
         self.publish_result_img = (
             self.get_parameter("publish_result_img").get_parameter_value().bool_value
         )
+        self.auto_activate = (
+            self.get_parameter("auto_activate").get_parameter_value().bool_value
+        )
 
         self._detection_pub = self.create_lifecycle_publisher(
             DetectionArray, "detections", 10
         )
         self._image_pub = (
-            self.create_lifecycle_publisher(
-                Image, "detections_img", self.image_qos_profile
-            )
+            self.create_publisher(Image, "detections_img", self.image_qos_profile)
             if self.publish_result_img
             else None
         )
@@ -142,7 +148,16 @@ class YoloNode(LifecycleNode):
         super().on_configure(state)
         self.get_logger().info(f"[{self.get_name()}] Configured")
 
+        if self.auto_activate:
+            self.activate_timer = self.create_timer(0.1, self._activate)
+
         return TransitionCallbackReturn.SUCCESS
+
+    def _activate(self):
+        _, state = self._state_machine.current_state
+        if state == "inactive":
+            self.activate_timer.cancel()
+            self.trigger_activate()
 
     def on_activate(self, state: LifecycleState) -> TransitionCallbackReturn:
         self.get_logger().info(f"[{self.get_name()}] Activating...")
@@ -345,7 +360,7 @@ class YoloNode(LifecycleNode):
         return keypoints_list
 
     def image_cb(self, input_img_msg: Image) -> None:
-
+        t0 = time.time()
         if self.enable:
 
             # convert image + predict
@@ -381,7 +396,7 @@ class YoloNode(LifecycleNode):
             # create detection msgs
             detections_msg = DetectionArray()
 
-            detect_dict={}
+            detect_dict = {}
             for i in range(len(result)):
 
                 aux_msg = Detection()
@@ -392,9 +407,9 @@ class YoloNode(LifecycleNode):
                     aux_msg.score = hypothesis[i]["score"]
 
                     if aux_msg.class_name not in detect_dict:
-                        detect_dict[aux_msg.class_name]=1
+                        detect_dict[aux_msg.class_name] = 1
                     else:
-                        detect_dict[aux_msg.class_name]+=1
+                        detect_dict[aux_msg.class_name] += 1
 
                     aux_msg.bbox = boxes[i]
 
@@ -417,7 +432,8 @@ class YoloNode(LifecycleNode):
                 )
 
                 self._image_pub.publish(output_img_msg)
-            self.get_logger().info(f"detect: {detect_dict}")
+            t1 = time.time()
+            self.get_logger().info(f"detect: {detect_dict}, {t1-t0:.2}sec")
             del result
             del input_image
 
@@ -435,9 +451,6 @@ class YoloNode(LifecycleNode):
 def main():
     rclpy.init()
     node = YoloNode()
-    node.trigger_configure()
-    node.trigger_activate()
-
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
