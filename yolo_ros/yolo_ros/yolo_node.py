@@ -14,6 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import time
+import traceback
 
 import cv2
 from typing import List, Dict
@@ -57,7 +58,7 @@ class YoloNode(LifecycleNode):
         # params
         self.declare_parameter("model_type", "YOLO")
         self.declare_parameter("model", "yolo11n.pt")
-        self.declare_parameter("device", "cuda:0")
+        self.declare_parameter("device", "cpu")
         self.declare_parameter("yolo_encoding", "bgr8")
         self.declare_parameter("enable", True)
         self.declare_parameter("image_reliability", QoSReliabilityPolicy.RELIABLE)
@@ -89,6 +90,8 @@ class YoloNode(LifecycleNode):
         )
         self.model = self.get_parameter("model").get_parameter_value().string_value
         self.device = self.get_parameter("device").get_parameter_value().string_value
+        if "cuda" in self.device:
+            self.get_logger().info( f"cuda available = {torch.cuda.is_available()}")        
         self.yolo_encoding = (
             self.get_parameter("yolo_encoding").get_parameter_value().string_value
         )
@@ -164,27 +167,35 @@ class YoloNode(LifecycleNode):
 
         try:
             self.yolo = self.type_to_model[self.model_type](self.model)
+        except Exception as ex:
+            traceback.print_exc()
+            return TransitionCallbackReturn.ERROR
         except FileNotFoundError:
             self.get_logger().error(f"Model file '{self.model}' does not exists")
             return TransitionCallbackReturn.ERROR
 
-        if isinstance(self.yolo, YOLO) or isinstance(self.yolo, YOLOWorld):
-            try:
-                self.get_logger().info("Trying to fuse model...")
-                self.yolo.fuse()
-            except TypeError as e:
-                self.get_logger().warn(f"Error while fuse: {e}")
+        try:
+            if isinstance(self.yolo, YOLO) or isinstance(self.yolo, YOLOWorld):
+                try:
+                    pass
+                    self.get_logger().info("Trying to fuse model...")
+                    self.yolo.fuse()
+                except TypeError as e:
+                    self.get_logger().warn(f"Error while fuse: {e}")
 
-        self._enable_srv = self.create_service(SetBool, "enable", self.enable_cb)
+            self._enable_srv = self.create_service(SetBool, "enable", self.enable_cb)
 
-        if isinstance(self.yolo, YOLOWorld):
-            self._set_classes_srv = self.create_service(
-                SetClasses, "set_classes", self.set_classes_cb
+            if isinstance(self.yolo, YOLOWorld):
+                self._set_classes_srv = self.create_service(
+                    SetClasses, "set_classes", self.set_classes_cb
+                )
+
+            self._sub = self.create_subscription(
+                Image, "image_raw", self.image_cb, self.image_qos_profile
             )
-
-        self._sub = self.create_subscription(
-            Image, "image_raw", self.image_cb, self.image_qos_profile
-        )
+        except Exception as ex:
+            traceback.print_exc()
+            raise ex
 
         super().on_activate(state)
         self.get_logger().info(f"[{self.get_name()}] Activated")
@@ -367,6 +378,7 @@ class YoloNode(LifecycleNode):
             input_image = self.cv_bridge.imgmsg_to_cv2(
                 input_img_msg, desired_encoding=self.yolo_encoding
             )
+            t1 = time.time()
             results = self.yolo.predict(
                 source=input_image,
                 verbose=False,
@@ -382,6 +394,7 @@ class YoloNode(LifecycleNode):
                 device=self.device,
             )
             result: Results = results[0].cpu()
+            t2 = time.time()
 
             if result.boxes or result.obb:
                 hypothesis = self.parse_hypothesis(result)
@@ -432,8 +445,8 @@ class YoloNode(LifecycleNode):
                 )
 
                 self._image_pub.publish(output_img_msg)
-            t1 = time.time()
-            self.get_logger().info(f"detect: {detect_dict}, {t1-t0:.2}sec")
+            t3 = time.time()
+            self.get_logger().info(f"detect: {detect_dict}, pre={t1-t0:.2}s, predict={t2-t1:.2}s, post={t3-t2:.2}s")
             del result
             del input_image
 
