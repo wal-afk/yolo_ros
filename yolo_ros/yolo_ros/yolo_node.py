@@ -163,18 +163,15 @@ class YoloNode(LifecycleNode):
             self.trigger_activate()
 
     def on_activate(self, state: LifecycleState) -> TransitionCallbackReturn:
-        self.get_logger().info(f"[{self.get_name()}] Activating...")
-
         try:
-            self.yolo = self.type_to_model[self.model_type](self.model)
-        except Exception as ex:
-            traceback.print_exc()
-            return TransitionCallbackReturn.ERROR
-        except FileNotFoundError:
-            self.get_logger().error(f"Model file '{self.model}' does not exists")
-            return TransitionCallbackReturn.ERROR
+            self.get_logger().info(f"[{self.get_name()}] Activating...")
 
-        try:
+            try:
+                self.yolo = self.type_to_model[self.model_type](self.model)
+            except FileNotFoundError:
+                self.get_logger().error(f"Model file '{self.model}' does not exists")
+                return TransitionCallbackReturn.ERROR
+
             if isinstance(self.yolo, YOLO) or isinstance(self.yolo, YOLOWorld):
                 try:
                     pass
@@ -193,14 +190,14 @@ class YoloNode(LifecycleNode):
             self._sub = self.create_subscription(
                 Image, "image_raw", self.image_cb, self.image_qos_profile
             )
+            super().on_activate(state)
+            self.get_logger().info(f"[{self.get_name()}] Activated")
+
+            return TransitionCallbackReturn.SUCCESS
         except Exception as ex:
             traceback.print_exc()
-            raise ex
+            return TransitionCallbackReturn.ERROR
 
-        super().on_activate(state)
-        self.get_logger().info(f"[{self.get_name()}] Activated")
-
-        return TransitionCallbackReturn.SUCCESS
 
     def on_deactivate(self, state: LifecycleState) -> TransitionCallbackReturn:
         self.get_logger().info(f"[{self.get_name()}] Deactivating...")
