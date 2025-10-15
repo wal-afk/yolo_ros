@@ -214,6 +214,13 @@ def generate_launch_description():
             description="Whether to activate the debug node",
         )
 
+        publish_result_img = LaunchConfiguration("publish_result_img")
+        publish_result_img_cmd = DeclareLaunchArgument(
+            "publish_result_img",
+            default_value="False",
+            description="Whether to publish result image for debug",
+        )
+
         # get topics for remap
         detect_3d_detections_topic = "detections"
         debug_detections_topic = "detections"
@@ -248,6 +255,7 @@ def generate_launch_description():
                     "agnostic_nms": agnostic_nms,
                     "retina_masks": retina_masks,
                     "image_reliability": image_reliability,
+                    "publish_result_img": publish_result_img,
                 }
             ],
             remappings=[("image_raw", input_image_topic)],
@@ -325,6 +333,7 @@ def generate_launch_description():
             maximum_detection_threshold_cmd,
             namespace_cmd,
             use_debug_cmd,
+            publish_result_img_cmd,
             yolo_node_cmd,
             tracking_node_cmd,
             detect_3d_node_cmd,

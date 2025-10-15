@@ -171,6 +171,7 @@ class YoloNode(LifecycleNode):
             except FileNotFoundError:
                 self.get_logger().error(f"Model file '{self.model}' does not exists")
                 return TransitionCallbackReturn.ERROR
+            self.get_logger().info(f"Model file '{self.model}' loaded")
 
             if isinstance(self.yolo, YOLO) or isinstance(self.yolo, YOLOWorld):
                 try:
